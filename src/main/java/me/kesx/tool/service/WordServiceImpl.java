@@ -43,20 +43,29 @@ public class WordServiceImpl {
 
     public List<Word> listToday(){
         String today = dateUtil.dateFormat(new Date());
-        return wordRepository.listToday(today);
+        List<Word> todayWordList = wordRepository.listToday(today);
+        todayWordList.forEach(todayWord ->{
+            todayWord.getDateToRound();
+            Gson gson = new Gson();
+            Map map = gson.fromJson(jsonString, Map.class);
+            map.get(today);
+        });
     }
 
     public List<Word> ListMarked(){
         return wordRepository.listMarked();
     }
 
-    public Word updateMarkedWord(WordVo req){
-        return wordRepository.updateMarked(req.getWordId(),req.getHasMarked());
+    public int updateMarkedWord(WordVo req){
+         return(wordRepository.updateMarked(req.getWordId(),req.getHasMarked()));
     }
-    public Word updateToughWord(WordVo req){
-        return wordRepository.updateTough(req.getWordId(),req.getHasMarked());
+    public int updateToughWord(WordVo req){
+        return wordRepository.updateTough(req.getWordId(),req.getStillTough());
     }
     public void deleteWord(WordVo req){
         wordRepository.deleteById(req.getWordId());
+    }
+    public int updateDetail(WordVo req){
+        return wordRepository.updateDetail(req.getNotes(),req.getPos(),req.getWordId());
     }
 }
