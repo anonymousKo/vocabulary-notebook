@@ -32,6 +32,19 @@ public class WordController {
     }
     @RequestMapping(value = "/listMarked")
     public Result<List<Word>> listMarked(){
-        return (Result.success(wordService.ListMarked()));
+        return Result.success(wordService.ListMarked());
+    }
+    @RequestMapping(value = "/update/marked")
+    public Result<Word> updateMarkedWord(@RequestBody WordVo req){
+        return Result.success(wordService.updateMarkedWord(req));
+    }
+    @RequestMapping(value = "/update/tough")
+    public Result<Word> updateToughWord(@RequestBody WordVo req){
+        return Result.success(wordService.updateToughWord(req));
+    }
+    @RequestMapping(value = "/delete")
+    public Result<Object> deleteWord(@RequestBody WordVo req){
+        wordService.deleteWord(req);
+        return Result.success();
     }
 }

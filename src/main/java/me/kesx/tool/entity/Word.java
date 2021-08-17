@@ -16,7 +16,7 @@ public class Word {
     private String pos;
     private String notes;
     private Date addDate;
-    private Integer hasMarked;
+    private Integer hasMarked=0;
     private String dateToRound;
-    private Integer stillTough;
+    private Integer stillTough=0;
 }
