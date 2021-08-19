@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class WordVo {
     private Integer wordId;
-    private String word;
+    private String wordItem;
     private String pos;
     private String notes;
     private Integer hasMarked;

@@ -28,6 +28,6 @@ public interface WordRepository extends CrudRepository<Word,Integer> {
     int updateTough( Integer wordId, Integer stillTough);
 
     @Modifying
-    @Query(value = "update Word word set word.notes= :notes,word.pos= :pos where word.wordId = :wordId")
-    int updateDetail(String notes,String pos,Integer wordId);
+    @Query(value = "update Word word set word.wordItem= :wordItem,word.notes= :notes,word.pos= :pos where word.wordId = :wordId")
+    int updateDetail(String notes,String pos,String wordItem,Integer wordId);
 }

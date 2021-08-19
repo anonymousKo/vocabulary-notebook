@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 
 @Service
 public class WordServiceImpl {
@@ -18,6 +19,8 @@ public class WordServiceImpl {
     DateUtil dateUtil;
     @Autowired
     WordRepository wordRepository;
+
+    LinkedBlockingQueue<WordVo> editMarkedQueue = new LinkedBlockingQueue();
 
     Map<String,Integer> DateToRound = new HashMap<>();
 
@@ -43,13 +46,7 @@ public class WordServiceImpl {
 
     public List<Word> listToday(){
         String today = dateUtil.dateFormat(new Date());
-        List<Word> todayWordList = wordRepository.listToday(today);
-        todayWordList.forEach(todayWord ->{
-            todayWord.getDateToRound();
-            Gson gson = new Gson();
-            Map map = gson.fromJson(jsonString, Map.class);
-            map.get(today);
-        });
+        return wordRepository.listToday(today);
     }
 
     public List<Word> ListMarked(){
@@ -66,6 +63,6 @@ public class WordServiceImpl {
         wordRepository.deleteById(req.getWordId());
     }
     public int updateDetail(WordVo req){
-        return wordRepository.updateDetail(req.getNotes(),req.getPos(),req.getWordId());
+        return wordRepository.updateDetail(req.getNotes(),req.getPos(),req.getWordItem(),req.getWordId());
     }
 }

@@ -12,7 +12,7 @@ public class Word {
     @Id
     @GeneratedValue(strategy=GenerationType.AUTO)
     private Integer wordId;
-    private String word;
+    private String wordItem;
     private String pos;
     private String notes;
     private Date addDate;

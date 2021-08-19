@@ -28,7 +28,7 @@ public class WordControllerTest {
         final String baseUrl = "http://localhost:"+port+"/add/";
         URI uri = new URI(baseUrl);
         WordVo wordVo = new WordVo();
-        wordVo.setWord("1");
+        wordVo.setWordItem("1");
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-COM-PERSIST", "true");
 
