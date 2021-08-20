@@ -44,12 +44,11 @@ public class WordControllerTest {
     @Test
     public void update() throws Exception {
 
-        final String baseUrl = "http://localhost:"+port+"/update";
+        final String baseUrl = "http://localhost:"+port+"/update/marked";
         URI uri = new URI(baseUrl);
         WordVo wordVo = new WordVo();
-        wordVo.setWordId(4);
-        wordVo.setPos("1234");
-        wordVo.setNotes("123");
+        wordVo.setWordId(1);
+        wordVo.setHasMarked(1);
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-COM-PERSIST", "true");
 

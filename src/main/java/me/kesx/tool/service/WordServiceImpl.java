@@ -10,6 +10,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -20,27 +21,36 @@ public class WordServiceImpl {
     @Autowired
     WordRepository wordRepository;
 
-    LinkedBlockingQueue<WordVo> editMarkedQueue = new LinkedBlockingQueue();
+    LinkedBlockingQueue<WordVo> editMarkedQueue = new LinkedBlockingQueue<>(100);
 
-    Map<String,Integer> DateToRound = new HashMap<>();
+    @PostConstruct
+    private void init(){
+        List<WordVo> x = new ArrayList<>();
+        editMarkedQueue.drainTo(x,50);
+        if(x.size() > 0){
+            if(x.size()%2 == 1){
 
+            }
+        }
+    }
     public Word addNewWord(WordVo req,String forgettingCurve){
+        Map<String,Integer> dateToRoundMarkedMap = new HashMap<>();
         Word word = new Word();
         BeanUtils.copyProperties(req,word);
         word.setAddDate(dateUtil.readableDateFormat(new Date()));
-        calculateRememberDate(forgettingCurve);
+        calculateRememberDate(forgettingCurve,dateToRoundMarkedMap);
         Gson gson = new Gson();
-        word.setDateToRound(gson.toJson(DateToRound));
+        word.setDateToHasMarked(gson.toJson(dateToRoundMarkedMap));
         return wordRepository.save(word);
     }
-    private void calculateRememberDate(String forgettingCurve){
+    private void calculateRememberDate(String forgettingCurve,Map<String,Integer> dateToRoundMarkedMap){
         String[] cycle = forgettingCurve.split(" ");
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(new Date());
         for(int i =0;i < cycle.length;i++){
             calendar.add(Calendar.DAY_OF_MONTH, Integer.parseInt(cycle[i]));
             String rememberDate = dateUtil.dateFormat(calendar.getTime());
-            DateToRound.put(rememberDate,i+1);
+            dateToRoundMarkedMap.put(rememberDate, 0);
         }
     }
 
@@ -54,7 +64,8 @@ public class WordServiceImpl {
     }
 
     public int updateMarkedWord(WordVo req){
-         return(wordRepository.updateMarked(req.getWordId(),req.getHasMarked()));
+        //TODO detect finished
+         return wordRepository.updateMarked(req.getWordId());
     }
     public int updateToughWord(WordVo req){
         return wordRepository.updateTough(req.getWordId(),req.getStillTough());
