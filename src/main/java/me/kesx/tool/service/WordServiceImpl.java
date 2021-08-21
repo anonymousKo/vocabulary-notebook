@@ -2,18 +2,29 @@ package me.kesx.tool.service;
 
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.reflect.TypeToken;
+import lombok.extern.slf4j.Slf4j;
 import me.kesx.tool.dao.WordRepository;
 import me.kesx.tool.entity.Word;
+import me.kesx.tool.entity.WordRound;
 import me.kesx.tool.entity.WordVo;
 import me.kesx.tool.util.DateUtil;
+import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class WordServiceImpl {
     @Autowired
@@ -34,29 +45,69 @@ public class WordServiceImpl {
         }
     }
     public Word addNewWord(WordVo req,String forgettingCurve){
-        Map<String,Integer> dateToRoundMarkedMap = new HashMap<>();
+        List<Object> wordRoundList = new ArrayList<>();
         Word word = new Word();
         BeanUtils.copyProperties(req,word);
         word.setAddDate(dateUtil.readableDateFormat(new Date()));
-        calculateRememberDate(forgettingCurve,dateToRoundMarkedMap);
+        calculateRememberDate(forgettingCurve,wordRoundList);
         Gson gson = new Gson();
-        word.setDateToHasMarked(gson.toJson(dateToRoundMarkedMap));
+        word.setDateToHasMarked(gson.toJson(wordRoundList));
+        System.out.println(word);
         return wordRepository.save(word);
     }
-    private void calculateRememberDate(String forgettingCurve,Map<String,Integer> dateToRoundMarkedMap){
-        String[] cycle = forgettingCurve.split(" ");
+
+    private void calculateRememberDate(String forgettingCurve, List wordRoundList){
+        String[] cycles = forgettingCurve.split(" ");
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(new Date());
-        for(int i =0;i < cycle.length;i++){
-            calendar.add(Calendar.DAY_OF_MONTH, Integer.parseInt(cycle[i]));
+        for (int i = 0 ;i < cycles.length ; i++) {
+            Map<String,String> wordRoundMap = new HashMap<>();
+            calendar.add(Calendar.DAY_OF_MONTH, Integer.parseInt(cycles[i]));
             String rememberDate = dateUtil.dateFormat(calendar.getTime());
-            dateToRoundMarkedMap.put(rememberDate, 0);
+            wordRoundMap.put("rememberDate", rememberDate);
+            wordRoundMap.put("round", String.valueOf(i+1));
+            wordRoundMap.put("hasMarked", "0");
+            wordRoundList.add(wordRoundMap);
         }
     }
 
-    public List<Word> listToday(){
+    public Map<String,List<WordVo>>  listToday(){
         String today = dateUtil.dateFormat(new Date());
-        return wordRepository.listToday(today);
+        List<Word> notFinishedWordList =  wordRepository.listNotFinished();
+        log.info("find not finished word ->{}",notFinishedWordList);
+        List<WordVo> todayWordList =  new ArrayList<>();
+        List<WordVo> remainWordList =  new ArrayList<>();
+        Map<String,List<WordVo>> isTodayToWordMap = new HashMap<>();
+        Gson gson = new Gson();
+        notFinishedWordList.forEach(word -> {
+            if(DateUtils.isSameDay(word.getAddDate(),new Date()) || word.getDateToHasMarked().contains(today)){
+                WordVo wordVo = new WordVo();
+                BeanUtils.copyProperties(word,wordVo);
+                wordVo.setRound(0);
+                todayWordList.add(wordVo);
+            }
+            List<WordRound>  wordRoundList = new ArrayList<>();
+            try{
+                wordRoundList =  gson.fromJson(word.getDateToHasMarked(), new TypeToken<ArrayList<WordRound>>(){}.getType());
+            }catch (Exception e ){
+                log.info(e.toString());
+            }
+            wordRoundList.forEach(wordRound -> {
+                if (wordRound.getHasMarked() != 1 && dateUtil.compareStringDateSmaller(wordRound.getRememberDate(), today)){
+                    WordVo wordVo = new WordVo();
+                    BeanUtils.copyProperties(word,wordVo);
+                    wordVo.setRound(wordRound.getRound());
+                    wordVo.setNeedRememberDate(wordRound.getRememberDate());
+                    remainWordList.add(wordVo);
+                }
+            });
+        });
+        List<WordVo> remainSortedWordList = remainWordList.stream().sorted(
+                Comparator.comparing(WordVo::getNeedRememberDate)).collect(Collectors.toList());
+        log.info("find the todayWords ->{};    the remainWordList->{}",todayWordList,remainSortedWordList);
+        isTodayToWordMap.put("today",todayWordList);
+        isTodayToWordMap.put("remain",remainSortedWordList);
+        return  isTodayToWordMap;
     }
 
     public List<Word> ListMarked(){
@@ -64,8 +115,19 @@ public class WordServiceImpl {
     }
 
     public int updateMarkedWord(WordVo req){
-        //TODO detect finished
-         return wordRepository.updateMarked(req.getWordId());
+        //TODO detect finished,use scheduled
+        Word word = wordRepository.findById(req.getWordId()).orElse(null);
+        if(word != null){
+            JsonElement jsonElement = new Gson().fromJson(word.getDateToHasMarked(), JsonElement.class);
+            jsonElement.getAsJsonArray().forEach(jsonSubElement -> {
+                if(jsonSubElement.getAsJsonObject().get("rememberDate").getAsString().equals(req.getNeedRememberDate())){
+                    int oldHasMarked = jsonSubElement.getAsJsonObject().get("hasMarked").getAsInt();
+                    jsonSubElement.getAsJsonObject().add("hasMarked", new JsonPrimitive((oldHasMarked + 1)&1) );
+                }
+            });
+            return wordRepository.updateMarked(req.getWordId(),jsonElement.toString());
+        }
+        return 0;
     }
     public int updateToughWord(WordVo req){
         return wordRepository.updateTough(req.getWordId(),req.getStillTough());

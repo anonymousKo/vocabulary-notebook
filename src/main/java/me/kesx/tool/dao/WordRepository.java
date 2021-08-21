@@ -10,19 +10,22 @@ import java.util.List;
 
 @Transactional
 public interface WordRepository extends CrudRepository<Word,Integer> {
-    @Query(value = "select w from Word w where Date(w.addDate)  = CURRENT_DATE() or" +
-            " w.dateToRound like "+"%"+"?1"+"%")
-    List<Word>  listToday(String today);
+//    @Query(value = "select w from Word w where Date(w.addDate)  = CURRENT_DATE() or" +
+//            " w.dateToRound like "+"%"+"?1"+"%")
+//    List<Word>  listToday(String today);
 
-    @Query(value = "select w from Word w where w.hasMarked = 1")
+    @Query(value = "select word from Word word where word.finished = 0")
+    List<Word>  listNotFinished();
+
+    @Query(value = "select w from Word w where w.stillTough = 1")
     List<Word>  listMarked();
 
     @Query(value = "select w.dateToHasMarked from Word w where w.wordId= :wordId")
     String queryHasMarked(Integer wordId);
 
     @Modifying
-    @Query(value = "update Word word set word.dateToHasMarked=word.dateToHasMarked where word.wordId = :wordId")
-    Integer updateMarked( Integer wordId);
+    @Query(value = "update Word word set word.dateToHasMarked= :updatedHasMarked where word.wordId = :wordId")
+    Integer updateMarked( Integer wordId,String updatedHasMarked);
 
     @Modifying
     @Query(value = "update Word word set word.stillTough= :stillTough where word.wordId = :wordId")

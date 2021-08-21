@@ -21,7 +21,15 @@ public class DateUtil {
     public String dateFormat(Date date) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd");
         return simpleDateFormat.format(date);
-
+    }
+    public boolean compareStringDateSmaller(String s1,String s2){
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd");
+        try {
+            return (simpleDateFormat.parse(s1).before(simpleDateFormat.parse(s2)));
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
 }

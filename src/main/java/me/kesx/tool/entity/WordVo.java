@@ -2,6 +2,8 @@ package me.kesx.tool.entity;
 
 import lombok.Data;
 
+import java.util.Date;
+
 
 @Data
 public class WordVo {
@@ -9,6 +11,8 @@ public class WordVo {
     private String wordItem;
     private String pos;
     private String notes;
-    private Integer hasMarked;
+    private Integer hasMarked = 0;
     private Integer stillTough;
+    private Integer round;
+    private String needRememberDate;
 }
