@@ -28,6 +28,10 @@ public interface WordRepository extends CrudRepository<Word,Integer> {
     Integer updateMarked( Integer wordId,String updatedHasMarked);
 
     @Modifying
+    @Query(value = "update Word word set word.finished= :isFinished where word.wordId = :wordId")
+    Integer updateFinished( Integer wordId,Integer isFinished);
+
+    @Modifying
     @Query(value = "update Word word set word.stillTough= :stillTough where word.wordId = :wordId")
     Integer updateTough( Integer wordId, Integer stillTough);
 

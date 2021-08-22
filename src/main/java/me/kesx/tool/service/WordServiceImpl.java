@@ -3,7 +3,6 @@ package me.kesx.tool.service;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
@@ -15,13 +14,12 @@ import me.kesx.tool.util.DateUtil;
 import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.lang.reflect.Type;
 import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,6 +29,8 @@ public class WordServiceImpl {
     DateUtil dateUtil;
     @Autowired
     WordRepository wordRepository;
+
+    ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(1);
 
     LinkedBlockingQueue<WordVo> editMarkedQueue = new LinkedBlockingQueue<>(100);
 
@@ -50,13 +50,13 @@ public class WordServiceImpl {
         BeanUtils.copyProperties(req,word);
         word.setAddDate(dateUtil.readableDateFormat(new Date()));
         calculateRememberDate(forgettingCurve,wordRoundList);
+        log.info("the word is:{}, rememberDate is:{}",word.getWordItem(),wordRoundList);
         Gson gson = new Gson();
         word.setDateToHasMarked(gson.toJson(wordRoundList));
-        System.out.println(word);
         return wordRepository.save(word);
     }
 
-    private void calculateRememberDate(String forgettingCurve, List wordRoundList){
+    private void calculateRememberDate(String forgettingCurve, List<Object> wordRoundList){
         String[] cycles = forgettingCurve.split(" ");
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(new Date());
@@ -115,20 +115,44 @@ public class WordServiceImpl {
     }
 
     public int updateMarkedWord(WordVo req){
-        //TODO detect finished,use scheduled
         Word word = wordRepository.findById(req.getWordId()).orElse(null);
         if(word != null){
             JsonElement jsonElement = new Gson().fromJson(word.getDateToHasMarked(), JsonElement.class);
             jsonElement.getAsJsonArray().forEach(jsonSubElement -> {
+                int oldHasMarked = jsonSubElement.getAsJsonObject().get("hasMarked").getAsInt();
                 if(jsonSubElement.getAsJsonObject().get("rememberDate").getAsString().equals(req.getNeedRememberDate())){
-                    int oldHasMarked = jsonSubElement.getAsJsonObject().get("hasMarked").getAsInt();
                     jsonSubElement.getAsJsonObject().add("hasMarked", new JsonPrimitive((oldHasMarked + 1)&1) );
                 }
             });
+            scheduled.schedule(() -> checkFinished(word, jsonElement), 10 * 1000, TimeUnit.MILLISECONDS);
             return wordRepository.updateMarked(req.getWordId(),jsonElement.toString());
         }
         return 0;
     }
+
+    private void checkFinished(Word word,JsonElement jsonElement){
+        AtomicInteger markedTimes = new AtomicInteger();
+        if(word.getFinished() != 1){
+            jsonElement.getAsJsonArray().forEach(jsonSubElement -> {
+                if(jsonSubElement.getAsJsonObject().get("hasMarked").getAsInt() == 1){
+                    markedTimes.getAndIncrement();
+                }
+            });
+            if (markedTimes.get() == 5){
+                wordRepository.updateFinished(word.getWordId(),1);
+            }
+        }else{
+            jsonElement.getAsJsonArray().forEach(jsonSubElement -> {
+                if(jsonSubElement.getAsJsonObject().get("hasMarked").getAsInt() == 1){
+                    markedTimes.getAndIncrement();
+                }
+            });
+            if (markedTimes.get() < 5){
+                wordRepository.updateFinished(word.getWordId(),0);
+            }
+        }
+    }
+
     public int updateToughWord(WordVo req){
         return wordRepository.updateTough(req.getWordId(),req.getStillTough());
     }
