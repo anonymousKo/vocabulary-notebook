@@ -7,3 +7,5 @@
 target
 *dev.properties
 *provided.properties
+node_modules
+dist
