@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.reflect.TypeToken;
 import lombok.extern.slf4j.Slf4j;
+import me.kesx.tool.cache.WordDaoCache;
 import me.kesx.tool.dao.WordRepository;
 import me.kesx.tool.entity.Word;
 import me.kesx.tool.entity.WordRound;
@@ -18,7 +19,10 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -29,6 +33,8 @@ public class WordServiceImpl {
     DateUtil dateUtil;
     @Autowired
     WordRepository wordRepository;
+    @Autowired
+    WordDaoCache wordDaoCache;
 
     ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(1);
 
@@ -53,7 +59,9 @@ public class WordServiceImpl {
         log.info("the word is:{}, rememberDate is:{}",word.getWordItem(),wordRoundList);
         Gson gson = new Gson();
         word.setDateToHasMarked(gson.toJson(wordRoundList));
-        return wordRepository.save(word);
+        Word result = wordRepository.save(word);
+        wordDaoCache.refreshNotFinished();
+        return result;
     }
 
     private void calculateRememberDate(String forgettingCurve, List<Object> wordRoundList){
@@ -73,14 +81,14 @@ public class WordServiceImpl {
 
     public Map<String,List<WordVo>>  listToday(){
         String today = dateUtil.dateFormat(new Date());
-        List<Word> notFinishedWordList =  wordRepository.listNotFinished();
+        List<Word> notFinishedWordList =  wordDaoCache.getAllNotFinished();
         log.info("find not finished word ->{}",notFinishedWordList);
         List<WordVo> todayWordList =  new ArrayList<>();
         List<WordVo> remainWordList =  new ArrayList<>();
         Map<String,List<WordVo>> isTodayToWordMap = new HashMap<>();
         Gson gson = new Gson();
         notFinishedWordList.forEach(word -> {
-            if(DateUtils.isSameDay(word.getAddDate(),new Date()) || word.getDateToHasMarked().contains(today)){
+            if(DateUtils.isSameDay(word.getAddDate(),new Date())){
                 WordVo wordVo = new WordVo();
                 BeanUtils.copyProperties(word,wordVo);
                 wordVo.setRound(0);
@@ -93,7 +101,13 @@ public class WordServiceImpl {
                 log.info(e.toString());
             }
             wordRoundList.forEach(wordRound -> {
-                if (wordRound.getHasMarked() != 1 && dateUtil.compareStringDateSmaller(wordRound.getRememberDate(), today)){
+                if(wordRound.getRememberDate().equals(today) ){
+                    WordVo wordVo = new WordVo();
+                    BeanUtils.copyProperties(word,wordVo);
+                    wordVo.setRound(wordRound.getRound());
+                    todayWordList.add(wordVo);
+                }
+                else if (wordRound.getHasMarked() != 1 && dateUtil.compareStringDateSmaller(wordRound.getRememberDate(), today)){
                     WordVo wordVo = new WordVo();
                     BeanUtils.copyProperties(word,wordVo);
                     wordVo.setRound(wordRound.getRound());
@@ -104,14 +118,15 @@ public class WordServiceImpl {
         });
         List<WordVo> remainSortedWordList = remainWordList.stream().sorted(
                 Comparator.comparing(WordVo::getNeedRememberDate)).collect(Collectors.toList());
-        log.info("find the todayWords ->{};    the remainWordList->{}",todayWordList,remainSortedWordList);
+        log.info("todayWords ->{};    remainWords->{}",todayWordList.stream().map(WordVo::getWordItem).collect(Collectors.toList()),
+                remainSortedWordList.stream().map(WordVo::getWordItem).collect(Collectors.toList()));
         isTodayToWordMap.put("today",todayWordList);
         isTodayToWordMap.put("remain",remainSortedWordList);
         return  isTodayToWordMap;
     }
 
-    public List<Word> ListMarked(){
-        return wordRepository.listMarked();
+    public List<Word> listTough(){
+        return wordDaoCache.getAllTough();
     }
 
     public int updateMarkedWord(WordVo req){
@@ -125,7 +140,9 @@ public class WordServiceImpl {
                 }
             });
             scheduled.schedule(() -> checkFinished(word, jsonElement), 10 * 1000, TimeUnit.MILLISECONDS);
-            return wordRepository.updateMarked(req.getWordId(),jsonElement.toString());
+            int result = wordRepository.updateMarked(req.getWordId(),jsonElement.toString());
+            wordDaoCache.refreshNotFinished();
+            return result;
         }
         return 0;
     }
@@ -153,13 +170,23 @@ public class WordServiceImpl {
         }
     }
 
-    public int updateToughWord(WordVo req){
-        return wordRepository.updateTough(req.getWordId(),req.getStillTough());
+    public int addToughWord(WordVo req){
+        int result = wordRepository.addToughWord(req.getWordId());
+        wordDaoCache.refreshTough();
+        return result;
+    }
+    public int removeToughWord(WordVo req){
+        int result = wordRepository.removeToughWord(req.getWordId());
+        wordDaoCache.refreshTough();
+        return result;
     }
     public void deleteWord(WordVo req){
+        wordDaoCache.refreshNotFinished();
         wordRepository.deleteById(req.getWordId());
     }
     public int updateDetail(WordVo req){
-        return wordRepository.updateDetail(req.getNotes(),req.getPos(),req.getWordItem(),req.getWordId());
+        int result = wordRepository.updateDetail(req.getNotes(),req.getPos(),req.getWordItem(),req.getWordId());
+        wordDaoCache.refreshNotFinished();
+        return result;
     }
 }

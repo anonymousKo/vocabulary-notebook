@@ -6,6 +6,7 @@ import me.kesx.tool.entity.WordVo;
 import me.kesx.tool.service.WordServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,7 +24,8 @@ public class WordController {
     private String forgettingCurve;
 
     @RequestMapping(value = "/add")
-    public Result<Word> add(@RequestBody WordVo req){
+    public Result<Word> add(@Validated @RequestBody WordVo req){
+        //TODO validated handle
         return(Result.success(wordService.addNewWord(req,forgettingCurve)));
     }
 
@@ -34,7 +36,7 @@ public class WordController {
 
     @RequestMapping(value = "/listMarked")
     public Result<List<Word>> listMarked(){
-        return Result.success(wordService.ListMarked());
+        return Result.success(wordService.listTough());
     }
 
     @RequestMapping(value = "/update/marked")
@@ -42,9 +44,14 @@ public class WordController {
         return Result.success(wordService.updateMarkedWord(req));
     }
 
-    @RequestMapping(value = "/update/tough")
-    public Result<Integer> updateToughWord(@RequestBody WordVo req){
-        return Result.success(wordService.updateToughWord(req));
+    @RequestMapping(value = "/update/addTough")
+    public Result<Integer> addToughWord(@RequestBody WordVo req){
+        return Result.success(wordService.addToughWord(req));
+    }
+
+    @RequestMapping(value = "/update/removeTough")
+    public Result<Integer> removeToughWord(@RequestBody WordVo req){
+        return Result.success(wordService.removeToughWord(req));
     }
 
     @RequestMapping(value = "/delete")

@@ -18,7 +18,7 @@ public interface WordRepository extends CrudRepository<Word,Integer> {
     List<Word>  listNotFinished();
 
     @Query(value = "select w from Word w where w.stillTough = 1")
-    List<Word>  listMarked();
+    List<Word> listTough();
 
     @Query(value = "select w.dateToHasMarked from Word w where w.wordId= :wordId")
     String queryHasMarked(Integer wordId);
@@ -32,8 +32,12 @@ public interface WordRepository extends CrudRepository<Word,Integer> {
     Integer updateFinished( Integer wordId,Integer isFinished);
 
     @Modifying
-    @Query(value = "update Word word set word.stillTough= :stillTough where word.wordId = :wordId")
-    Integer updateTough( Integer wordId, Integer stillTough);
+    @Query(value = "update Word word set word.stillTough= 1 where word.wordId = :wordId")
+    Integer addToughWord( Integer wordId);
+
+    @Modifying
+    @Query(value = "update Word word set word.stillTough= 0 where word.wordId = :wordId")
+    Integer removeToughWord( Integer wordId);
 
     @Modifying
     @Query(value = "update Word word set word.wordItem= :wordItem,word.notes= :notes,word.pos= :pos where word.wordId = :wordId")
