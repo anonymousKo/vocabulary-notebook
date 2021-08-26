@@ -29,6 +29,12 @@ public class Result<T> {
 
     public static <T> Result<T> success(T data) {return  new Result<>(data);}
 
+    public static <T> Result<T> error(String msg) {return new Result<>(msg);}
+
+    public static <T> Result<T> error(ResultEnum resultEnum,T data) {
+        return Result.build(resultEnum.getCode(),resultEnum.getMsg(),data);
+    }
+
     public Integer getCode() {
         return code;
     }

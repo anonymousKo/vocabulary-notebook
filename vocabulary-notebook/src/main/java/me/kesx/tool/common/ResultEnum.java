@@ -3,7 +3,9 @@ package me.kesx.tool.common;
 public enum ResultEnum {
     SUCCESS(200,"success"),
 
-    ERROR(500,"error"),;
+    ERROR(500,"error"),
+
+    Conflict(409,"conflic");
 
     private final Integer code;
     private final String msg;
