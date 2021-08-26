@@ -7,10 +7,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Component
 public class WordDaoCache {
@@ -49,12 +46,12 @@ public class WordDaoCache {
 
     @Scheduled
     public synchronized void refreshNotFinished(){
-        notFinishedWordList =  wordRepository.listNotFinished();
+        notFinishedWordList =  wordRepository.listNotFinished().orElse(Collections.emptyList());
     }
     public synchronized void refreshTough(){
-        toughWordList =  wordRepository.listTough();
+        toughWordList =  wordRepository.listTough().orElse(Collections.emptyList());
     }
     public synchronized void refreshWordItem(){
-        wordItemSet =  wordRepository.listWordItem();
+        wordItemSet =  wordRepository.listWordItem().orElse(Collections.emptySet());
     }
 }

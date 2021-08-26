@@ -88,6 +88,7 @@ public class WordServiceImpl {
     public Map<String,List<WordVo>>  listToday(){
         String today = dateUtil.dateFormat(new Date());
         List<Word> notFinishedWordList =  wordDaoCache.getAllNotFinished();
+        if(notFinishedWordList.isEmpty()){return null;}
         log.info("find not finished word ->{}",notFinishedWordList);
         List<WordVo> todayWordList =  new ArrayList<>();
         List<WordVo> remainWordList =  new ArrayList<>();

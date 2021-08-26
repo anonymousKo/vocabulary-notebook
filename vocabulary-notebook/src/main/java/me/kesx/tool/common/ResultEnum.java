@@ -5,7 +5,7 @@ public enum ResultEnum {
 
     ERROR(500,"error"),
 
-    Conflict(409,"conflic");
+    Conflict(409,"conflict");
 
     private final Integer code;
     private final String msg;

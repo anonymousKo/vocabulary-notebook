@@ -7,6 +7,7 @@ import org.springframework.data.repository.CrudRepository;
 
 import javax.transaction.Transactional;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Transactional
@@ -16,10 +17,10 @@ public interface WordRepository extends CrudRepository<Word,Integer> {
 //    List<Word>  listToday(String today);
 
     @Query(value = "select word from Word word where word.finished = 0")
-    List<Word>  listNotFinished();
+    Optional<List<Word>>  listNotFinished();
 
     @Query(value = "select w from Word w where w.stillTough = 1")
-    List<Word> listTough();
+    Optional<List<Word>> listTough();
 
     @Modifying
     @Query(value = "update Word word set word.dateToHasMarked= :updatedHasMarked where word.wordId = :wordId")
@@ -27,7 +28,7 @@ public interface WordRepository extends CrudRepository<Word,Integer> {
 
     @Modifying
     @Query(value = "update Word word set word.finished= :isFinished where word.wordId = :wordId")
-    Integer updateFinished( Integer wordId,Integer isFinished);
+    void updateFinished( Integer wordId,Integer isFinished);
 
     @Modifying
     @Query(value = "update Word word set word.stillTough= 1 where word.wordId = :wordId")
@@ -42,7 +43,7 @@ public interface WordRepository extends CrudRepository<Word,Integer> {
     Integer updateDetail(String notes,String pos,String wordItem,Integer wordId);
 
     @Query(value = "select word.wordItem from Word word")
-    Set<String> listWordItem();
+    Optional<Set<String>> listWordItem();
 
     @Query(value = "select word from Word word where word.wordItem= :wordItem")
     Word queryByWordItem(String wordItem);
