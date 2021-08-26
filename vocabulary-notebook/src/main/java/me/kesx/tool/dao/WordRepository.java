@@ -7,6 +7,7 @@ import org.springframework.data.repository.CrudRepository;
 
 import javax.transaction.Transactional;
 import java.util.List;
+import java.util.Set;
 
 @Transactional
 public interface WordRepository extends CrudRepository<Word,Integer> {
@@ -19,9 +20,6 @@ public interface WordRepository extends CrudRepository<Word,Integer> {
 
     @Query(value = "select w from Word w where w.stillTough = 1")
     List<Word> listTough();
-
-    @Query(value = "select w.dateToHasMarked from Word w where w.wordId= :wordId")
-    String queryHasMarked(Integer wordId);
 
     @Modifying
     @Query(value = "update Word word set word.dateToHasMarked= :updatedHasMarked where word.wordId = :wordId")
@@ -42,4 +40,10 @@ public interface WordRepository extends CrudRepository<Word,Integer> {
     @Modifying
     @Query(value = "update Word word set word.wordItem= :wordItem,word.notes= :notes,word.pos= :pos where word.wordId = :wordId")
     Integer updateDetail(String notes,String pos,String wordItem,Integer wordId);
+
+    @Query(value = "select word.wordItem from Word word")
+    Set<String> listWordItem();
+
+    @Query(value = "select word from Word word where word.wordItem= :wordItem")
+    Word queryByWordItem(String wordItem);
 }

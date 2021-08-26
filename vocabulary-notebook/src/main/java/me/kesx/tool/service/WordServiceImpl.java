@@ -17,10 +17,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,19 +36,10 @@ public class WordServiceImpl {
 
     ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(1);
 
-    LinkedBlockingQueue<WordVo> editMarkedQueue = new LinkedBlockingQueue<>(100);
-
-    @PostConstruct
-    private void init(){
-        List<WordVo> x = new ArrayList<>();
-        editMarkedQueue.drainTo(x,50);
-        if(x.size() > 0){
-            if(x.size()%2 == 1){
-
-            }
-        }
-    }
     public Word addNewWord(WordVo req,String forgettingCurve){
+        if (wordDaoCache.getWordItem().contains(req.getWordItem())){
+            return queryByWordItem(req);
+        }
         List<Object> wordRoundList = new ArrayList<>();
         Word word = new Word();
         BeanUtils.copyProperties(req,word);
@@ -59,9 +48,12 @@ public class WordServiceImpl {
         log.info("the word is:{}, rememberDate is:{}",word.getWordItem(),wordRoundList);
         Gson gson = new Gson();
         word.setDateToHasMarked(gson.toJson(wordRoundList));
-        Word result = wordRepository.save(word);
-        wordDaoCache.refreshNotFinished();
-        return result;
+        wordRepository.save(word);
+        runBackground(() -> {
+            wordDaoCache.refreshWordItem();
+            wordDaoCache.refreshNotFinished();
+        });
+        return null;
     }
 
     private void calculateRememberDate(String forgettingCurve, List<Object> wordRoundList){
@@ -79,6 +71,20 @@ public class WordServiceImpl {
         }
     }
 
+    private Word queryByWordItem(WordVo req){
+        return wordRepository.queryByWordItem(req.getWordItem());
+    }
+
+    private List<WordRound>  analyzeDateToHasMarked(List<WordRound> wordRoundList ,Word word){
+        Gson gson = new Gson();
+        try{
+            wordRoundList =  gson.fromJson(word.getDateToHasMarked(), new TypeToken<ArrayList<WordRound>>(){}.getType());
+        }catch (Exception e ){
+            log.info(e.toString());
+        }
+        return wordRoundList;
+    }
+
     public Map<String,List<WordVo>>  listToday(){
         String today = dateUtil.dateFormat(new Date());
         List<Word> notFinishedWordList =  wordDaoCache.getAllNotFinished();
@@ -86,7 +92,6 @@ public class WordServiceImpl {
         List<WordVo> todayWordList =  new ArrayList<>();
         List<WordVo> remainWordList =  new ArrayList<>();
         Map<String,List<WordVo>> isTodayToWordMap = new HashMap<>();
-        Gson gson = new Gson();
         notFinishedWordList.forEach(word -> {
             if(DateUtils.isSameDay(word.getAddDate(),new Date())){
                 WordVo wordVo = new WordVo();
@@ -95,11 +100,7 @@ public class WordServiceImpl {
                 todayWordList.add(wordVo);
             }
             List<WordRound>  wordRoundList = new ArrayList<>();
-            try{
-                wordRoundList =  gson.fromJson(word.getDateToHasMarked(), new TypeToken<ArrayList<WordRound>>(){}.getType());
-            }catch (Exception e ){
-                log.info(e.toString());
-            }
+            wordRoundList = analyzeDateToHasMarked(wordRoundList,word);
             wordRoundList.forEach(wordRound -> {
                 if(wordRound.getRememberDate().equals(today) ){
                     WordVo wordVo = new WordVo();
@@ -141,7 +142,7 @@ public class WordServiceImpl {
             });
             scheduled.schedule(() -> checkFinished(word, jsonElement), 10 * 1000, TimeUnit.MILLISECONDS);
             int result = wordRepository.updateMarked(req.getWordId(),jsonElement.toString());
-            wordDaoCache.refreshNotFinished();
+            runBackground(() -> {wordDaoCache.refreshNotFinished();} );
             return result;
         }
         return 0;
@@ -172,21 +173,25 @@ public class WordServiceImpl {
 
     public int addToughWord(WordVo req){
         int result = wordRepository.addToughWord(req.getWordId());
-        wordDaoCache.refreshTough();
+        runBackground(() -> {wordDaoCache.refreshTough();} );
         return result;
     }
     public int removeToughWord(WordVo req){
         int result = wordRepository.removeToughWord(req.getWordId());
-        wordDaoCache.refreshTough();
+        runBackground(() -> {wordDaoCache.refreshTough();} );
         return result;
     }
     public void deleteWord(WordVo req){
-        wordDaoCache.refreshNotFinished();
+        runBackground(() -> {wordDaoCache.refreshNotFinished();} );
         wordRepository.deleteById(req.getWordId());
     }
     public int updateDetail(WordVo req){
         int result = wordRepository.updateDetail(req.getNotes(),req.getPos(),req.getWordItem(),req.getWordId());
-        wordDaoCache.refreshNotFinished();
+        runBackground(() -> {wordDaoCache.refreshNotFinished();} );
         return result;
+    }
+
+    public   void runBackground(Runnable runnable){
+        scheduled.schedule(runnable , 0,TimeUnit.SECONDS);
     }
 }

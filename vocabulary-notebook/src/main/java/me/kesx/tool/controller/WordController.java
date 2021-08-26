@@ -1,6 +1,7 @@
 package me.kesx.tool.controller;
 
 import me.kesx.tool.common.Result;
+import me.kesx.tool.common.ResultEnum;
 import me.kesx.tool.entity.Word;
 import me.kesx.tool.entity.WordVo;
 import me.kesx.tool.service.WordServiceImpl;
@@ -26,7 +27,13 @@ public class WordController {
     @RequestMapping(value = "/add")
     public Result<Word> add(@Validated @RequestBody WordVo req){
         //TODO validated handle
-        return(Result.success(wordService.addNewWord(req,forgettingCurve)));
+        Word result = wordService.addNewWord(req,forgettingCurve);
+        if(result != null){
+            return Result.error(ResultEnum.Conflict,result);
+        } else {
+            return Result.success();
+        }
+
     }
 
     @RequestMapping(value = "/listToday")

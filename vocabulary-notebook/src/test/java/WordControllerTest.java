@@ -37,6 +37,8 @@ public class WordControllerTest {
 
         ResponseEntity<String> result = this.restTemplate.postForEntity(uri, request, String.class);
 
+        System.out.println("resp=  "+ result);
+
         //Verify request succeed
         Assert.assertEquals(200, result.getStatusCodeValue());
     }

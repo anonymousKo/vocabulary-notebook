@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class WordDaoCache {
@@ -20,11 +22,14 @@ public class WordDaoCache {
 
     List<Word> toughWordList = new ArrayList<>();
 
+    Set<String> wordItemSet = new HashSet<>();
+
     @PostConstruct
     public void init(){
         try{
             refreshNotFinished();
             refreshTough();
+            refreshWordItem();
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -38,11 +43,18 @@ public class WordDaoCache {
         return toughWordList;
     }
 
+    public synchronized Set<String> getWordItem(){
+        return wordItemSet;
+    }
+
     @Scheduled
     public synchronized void refreshNotFinished(){
         notFinishedWordList =  wordRepository.listNotFinished();
     }
     public synchronized void refreshTough(){
         toughWordList =  wordRepository.listTough();
+    }
+    public synchronized void refreshWordItem(){
+        wordItemSet =  wordRepository.listWordItem();
     }
 }
